@@ -47,7 +47,7 @@ def analyze(statement):
             OVR_input = model[similar_word].reshape(1, -1)
             query = list(emotions.columns)[OVR.predict(OVR_input)]
             callAPI(query)
-            response = "<" + data['playlists']['items'][0]['href'] + ">"
+            response = "<" + data['playlists']['items'][0]['external_urls']['spotify'] + ">"
             return response
 
 def conversation_start():
@@ -56,7 +56,7 @@ def conversation_start():
         statement = input("> ")
         print(analyze(statement))
         user_input.append(statement)
-        user_input = " ".join(c.strip(string.punctuation) for c in user_input).lower().split(' ')
+        user_input = " ".join("".join(char for char in sent if char not in string.punctuation) for sent in user_input).lower().split(' ')
 
         # if statement == "MUSIC4LYFE":
         #     samples = [word for word in user_input if word not in cachedStopWords]
