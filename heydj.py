@@ -9,16 +9,15 @@ import random
 import string
 import nltk
 from nltk.corpus import stopwords
-from EmoClassifier import emo2vec, model
+from EmoClassifier import emo2vec, model, emotions, emo_model
 from PLRetriever import callAPI
-from bot_responses import convos, reflections
+from bot_responses import *
 import numpy as np
 from nltk.chat import *
 import os
 import time
 from slackclient import SlackClient
 
-user_input = []
 samples = []
 cachedStopWords = stopwords.words("english")
 
@@ -27,13 +26,20 @@ def reflect(fragment):
     tokens = [*map(lambda x:reflections[x] if x in reflections else x, tokens)]
     return ' '.join(tokens)
 
+def playlist_recommender(list_of_strings):
+    mood = " ".join("".join(char for char in sent if char not in string.punctuation) for sent in list_of_strings).lower().split(' ')
+    prediction_words = [word for word in mood if word not in cachedStopWords]
+    similar_word_vectors, degree_of_similarity = model.most_similar(positive=prediction_words, topn=1)[0]
+    prediction = model[similar_word_vectors].reshape(1, -1)
+    call = list(emotions.columns)[emo_model.predict(prediction)]
+    data = callAPI(call)
+    items = data['playlists']['items']
+    playlist = random.choice(items)['external_urls']['spotify']
+    return playlist
 
 def analyze(statement):
     """
     Match user's input to responses in psychobabble. Then reflect candidate response.
-    If response is 'music4lyfe', then make a call to Spotify's API and return a playlist
-    based on the OnevsRest(OVR) classifier's interpretation of user's input
-    emotional content.
     """
     statement = statement.lower()
     for item in convos:
@@ -41,40 +47,13 @@ def analyze(statement):
         if match:
             response = np.random.choice(item[1])
             return response.replace('{0}',reflect(match.group(0)))
-        elif match == "music4lyfe":
-            samples = [word for word in user_input if word not in cachedStopWords]
-            similar_word, similarity = model.most_similar(positive=samples, topn=1)[0]
-            OVR_input = model[similar_word].reshape(1, -1)
-            query = list(emotions.columns)[OVR.predict(OVR_input)]
-            callAPI(query)
-            response = "<" + data['playlists']['items'][0]['external_urls']['spotify'] + ">"
-            return response
-
-def conversation_start():
-    print("Hello. How are you feeling today?")
-    while True:
-        statement = input("> ")
-        print(analyze(statement))
-        user_input.append(statement)
-        user_input = " ".join("".join(char for char in sent if char not in string.punctuation) for sent in user_input).lower().split(' ')
-
-        # if statement == "MUSIC4LYFE":
-        #     samples = [word for word in user_input if word not in cachedStopWords]
-        #     similar_word, similarity = model.most_similar(positive=samples, topn=1)[0]
-        #     OVR_input = model[similar_word].reshape(1, -1)
-        #     query = emo2vec.label_name[OVR.predict(OVR_input)].values[0]
-        #     callAPI(query)
-
-        if statement == "quit":
-            print(analyze(statement))
-            break
 
 # starterbot's ID as an environment variable
 BOT_ID = os.environ.get("BOT_ID")
 
 # constants
 AT_BOT = "<@" + BOT_ID + ">"
-EXAMPLE_COMMAND = "do"
+REQUEST_COMMAND = "retrieval"
 
 # instantiate Slack & Twilio clients
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
@@ -85,10 +64,21 @@ def handle_command(command, channel):
         are valid commands. If so, then acts on the commands. If not,
         returns back what it needs for clarification.
     """
-
-    response = analyze(command)
-    slack_client.api_call("chat.postMessage", channel=channel,
-                          text=response, unfurl_links=True, as_user=True)
+    feelings_list = []
+    feelings_list.append(command)
+    
+    response = "Hello Beautiful! How are you feeling today? Use the *" + REQUEST_COMMAND + \
+               "* request to get my musical interpretation of your mood today."
+    if command.startswith(REQUEST_COMMAND):
+        slack_client.api_call("chat.postMessage", channel=channel,text="reading your mood...", as_user=True)
+        response = "<" + playlist_recommender(feelings_list) + "|Click here!!!>"
+        slack_client.api_call("chat.postMessage",
+         channel=channel,
+         text="...aaand here's your perfect playlist for this moment :)\n" + response + "\n SO FRESH! Listen and enjoy",
+          unfurl_links=True, as_user=True)
+    else:
+        response3 = analyze(command)
+        slack_client.api_call("chat.postMessage", channel=channel,text=response3, as_user=True)
 
 def parse_slack_output(slack_rtm_output):
     """
@@ -103,6 +93,7 @@ def parse_slack_output(slack_rtm_output):
                 # return text after the @ mention, whitespace removed
                 return output['text'].split(AT_BOT)[1].strip().lower(), \
                        output['channel']
+
     return None, None
 
 

@@ -4,25 +4,12 @@
 """
 import pandas as pd
 import gensim
-import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import LinearSVC
-from sklearn.mixture import GaussianMixture
-from sklearn.metrics import silhouette_score
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import GaussianNB
-from sklearn.manifold import TSNE
-from sklearn import preprocessing
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.metrics import accuracy_score
 
 #load data for emo2vec
-loc = '../NRC-Emotion-Lexicon-v0.92-Annotator-and-Sense-Level/NRC-Emotion-Lexicon-v0.92-Annotator-and-Sense-Level.txt'
+loc = 'https://s3-us-west-1.amazonaws.com/victorsdatasets/NRCEmotionLexiconv092AnnotatorandSenseLevel.txt'
 print("loading & cleaning the data...")
 em_words = pd.read_csv(loc, sep='\t', names=['annotator_id',
                                                'remove',
@@ -50,7 +37,6 @@ em_words['toss6'], em_words['disgust'] = em_words['disgust'].str.split('-').str
 em_words['toss7'], em_words['surprise'] = em_words['surprise'].str.split('-').str
 em_words['toss8'], em_words['anticipation'] = em_words['anticipation'].str.split('-').str
 em_words['toss9'], em_words['POS'] = em_words['POS'].str.split('-').str
-em_words.head()
 
 em_words.drop(['toss1','toss2','toss3','toss4','toss5','toss6','toss7','toss8','toss9'],
               axis=1,
@@ -68,7 +54,6 @@ new_cols = ['annotator_id',
                     'anticipation',
                     'POS']
 em_words = em_words.reindex_axis(new_cols, axis=1)
-em_words.head()
 
 emotions = em_words[['joy',
                      'sadness',
@@ -109,7 +94,15 @@ df1 = affected[emotions.columns].rank(method='max', axis=1).rank(method='first',
 ma = df1.max().max()
 affected['label'] = (df1== ma).astype(int).values.tolist()
 affected['target'] = affected['label'].apply(lambda x: x.index(1))
-label_dict = {0 : 'joy', 1 : 'sadness', 2 : 'fear', 3 : 'anger', 4 : 'trust', 5 : 'disgust', 6 : 'surprise', 7 : 'anticipation'}
+label_dict = {0 : 'joy',
+              1 : 'sadness',
+              2 : 'fear',
+              3 : 'anger',
+              4 : 'trust',
+              5 : 'disgust',
+              6 : 'surprise',
+              7 : 'anticipation'}
+
 affected['label_name'] = affected['target'].apply(lambda x: label_dict[x])
 
 emo2vec = affected[['word_vectors', 'label_vectors', 'binary', 'label', 'target', 'label_name']]

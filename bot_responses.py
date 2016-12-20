@@ -15,6 +15,8 @@ reflections = {
     "me": "you"
 }
 
+greetings = [r'[Hh]ey|( there)', r'[Hh]ello', r'[Ss]up[\??]', r'[Ww]hat[\'\]s up[\??]']
+
 convos = [
     [r'I need (.*)',
      ["Why do you need {0}?",
@@ -85,9 +87,9 @@ convos = [
       "But you're not sure {0}?"]],
 
     [r'playlist',
-     ["Hot and fresh tunes, coming right up. Type music4lyfe to confirm.",
-      "Finding the right tracks for you... Type music4lyfe to confirm.",
-      "DJbot is in the mix! Type music4lyfe to confirm."]],
+     ["Hot and fresh tunes, coming right up. Tell me \'go DJ\' to get some fly tunes.",
+      "Finding the right tracks for you... Tell me \'go DJ\' to get some fly tunes.",
+      "DJbot is in the mix! Tell me \'go DJ\' to get some fly tunes."]],
 
     [r'Yes',
      ["You seem quite sure.",
@@ -163,10 +165,6 @@ convos = [
      ["This playlist is for you, so let's focus on that, shall we?",
       "Why do you say that about me?",
       "Why do you care whether I {0}?"]],
-
-    [r'music4lyfe',
-     ["",
-      ""]],
 
     [r'I want (.*)',
      ["What would it mean to you if you got {0}?",
